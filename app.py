@@ -56,14 +56,13 @@ else:
     df.set_index('Date', inplace=True)
 
     # Split data into train and valid
-    dataset = df.values
-    train = dataset[0:990, :]
-    valid = dataset[990:, :]
+    train_size = int(len(df) * 0.8)  # Use 80% of the data for training
+    train, valid = df.iloc[:train_size], df.iloc[train_size:]
 
     if model_type == 'LSTM':
         # LSTM model
         scaler = MinMaxScaler(feature_range=(0, 1))
-        scaled_data = scaler.fit_transform(dataset)
+        scaled_data = scaler.fit_transform(df)
         x_train, y_train = [], []
         for i in range(60, len(train)):
             x_train.append(scaled_data[i-60:i, 0])
@@ -89,7 +88,6 @@ else:
         closing_price = model.predict(X_test)
         closing_price = scaler.inverse_transform(closing_price)
 
-        valid = pd.DataFrame(valid, columns=['Adj Close'])
         valid['Predictions'] = closing_price
         title = f'Predicted Adj Close Price vs Actual Close Price on {ticker} using LSTM'
 
@@ -100,13 +98,13 @@ else:
         df['Day'] = df.index.day
         df['DayOfWeek'] = df.index.dayofweek
         df['DayOfYear'] = df.index.dayofyear
-        df.drop('Adj Close', axis=1, inplace=True)
+        features = df.drop('Adj Close', axis=1)
 
-        train = df[:990]
-        valid = df[990:]
-        x_train = train.drop('Adj Close', axis=1)
-        y_train = train['Adj Close']
-        x_valid = valid.drop('Adj Close', axis=1)
+        train = features[:train_size]
+        valid = features[train_size:]
+        x_train = train
+        y_train = df['Adj Close'][:train_size]
+        x_valid = valid
 
         params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
         knn = neighbors.KNeighborsRegressor()
@@ -114,7 +112,6 @@ else:
         model.fit(x_train, y_train)
         preds = model.predict(x_valid)
 
-        valid = pd.DataFrame(valid, columns=['Adj Close'])
         valid['Predictions'] = preds
         title = f'Predicted Adj Close Price vs Actual Close Price on {ticker} using KNN'
 
@@ -125,22 +122,21 @@ else:
         df['Day'] = df.index.day
         df['DayOfWeek'] = df.index.dayofweek
         df['DayOfYear'] = df.index.dayofyear
-        df.drop('Adj Close', axis=1, inplace=True)
+        features = df.drop('Adj Close', axis=1)
 
-        train = df[:990]
-        valid = df[990:]
-        x_train = train.drop('Adj Close', axis=1)
-        y_train = train['Adj Close']
-        x_valid = valid.drop('Adj Close', axis=1)
+        train = features[:train_size]
+        valid = features[train_size:]
+        x_train = train
+        y_train = df['Adj Close'][:train_size]
+        x_valid = valid
 
         model = LinearRegression()
         model.fit(x_train, y_train)
         preds = model.predict(x_valid)
 
-        valid = pd.DataFrame(valid, columns=['Adj Close'])
         valid['Predictions'] = preds
         title = f'Predicted Adj Close Price vs Actual Close Price on {ticker} using Linear Regression'
 
     # Plot results
-    plot_results(pd.DataFrame(train, columns=['Adj Close']), valid, title)
+    plot_results(pd.DataFrame(train), valid, title)
     st.write(f'RMSE: {np.sqrt(mean_squared_error(valid["Adj Close"], valid["Predictions"]))}')
