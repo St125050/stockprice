@@ -57,14 +57,22 @@ else:
     df.reset_index(inplace=True)  # Keep the Date as a column
     df.set_index('Date', inplace=True)
 
+    # Create features for KNN and Linear Regression
+    df['Year'] = df.index.year
+    df['Month'] = df.index.month
+    df['Day'] = df.index.day
+    df['DayOfWeek'] = df.index.dayofweek
+    df['DayOfYear'] = df.index.dayofyear
+
     # Split data into train and valid
     train_size = int(len(df) * 0.8)  # Use 80% of the data for training
     train, valid = df.iloc[:train_size], df.iloc[train_size:]
 
+    # For LSTM
     if model_type == 'LSTM':
-        # LSTM model
         scaler = MinMaxScaler(feature_range=(0, 1))
-        scaled_data = scaler.fit_transform(df)
+        scaled_data = scaler.fit_transform(df[[target_col]])
+        
         x_train, y_train = [], []
         for i in range(60, len(train)):
             x_train.append(scaled_data[i-60:i, 0])
@@ -93,15 +101,9 @@ else:
         valid['Predictions'] = closing_price
         title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using LSTM'
 
+    # For KNN
     elif model_type == 'KNN':
-        # KNN model
-        df['Year'] = df.index.year
-        df['Month'] = df.index.month
-        df['Day'] = df.index.day
-        df['DayOfWeek'] = df.index.dayofweek
-        df['DayOfYear'] = df.index.dayofyear
         features = df.drop(target_col, axis=1)
-
         train = features[:train_size]
         valid = features[train_size:]
         x_train = train
@@ -117,15 +119,9 @@ else:
         valid['Predictions'] = preds
         title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using KNN'
 
+    # For Linear Regression
     else:
-        # Linear Regression model
-        df['Year'] = df.index.year
-        df['Month'] = df.index.month
-        df['Day'] = df.index.day
-        df['DayOfWeek'] = df.index.dayofweek
-        df['DayOfYear'] = df.index.dayofyear
         features = df.drop(target_col, axis=1)
-
         train = features[:train_size]
         valid = features[train_size:]
         x_train = train
