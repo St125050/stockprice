@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn import neighbors
-from sklearn.model_selection import GridSearchCV
-from sklearn.linear_model import LinearRegression
 from keras.models import Sequential
 from keras.layers import Dense, LSTM
 from sklearn.metrics import mean_squared_error
@@ -36,43 +33,34 @@ st.title('Stock Price Prediction')
 # Sidebar for user input
 st.sidebar.header('User Input')
 ticker = st.sidebar.selectbox('Select Stock Ticker', ('TCS.NS', 'TATAMOTORS.NS', 'TRIDENT.NS'))
-model_type = st.sidebar.selectbox('Select Model', ('LSTM', 'KNN', 'Linear Regression'))
 
-# Get stock data
-data = get_stock_data(ticker)
+# Button to make predictions
+if st.sidebar.button('Predict'):
+    # Get stock data
+    data = get_stock_data(ticker)
 
-# Debugging: Display the first few rows of the data and its columns
-st.write("First few rows of the downloaded data:")
-st.write(data.head())
-st.write("Downloaded data columns:", data.columns)
+    # Debugging: Display the first few rows of the data
+    st.write("First few rows of the downloaded data:")
+    st.write(data.head())
 
-# Use 'Close' column
-target_col = 'Close'
+    # Use 'Close' column
+    target_col = 'Close'
 
-if target_col not in data.columns:
-    st.error(f"'{target_col}' column not found in the data for {ticker}. Please check the data source.")
-else:
-    # Preprocess data
-    df = data[[target_col]].copy()
-    df.reset_index(inplace=True)  # Keep the Date as a column
-    df.set_index('Date', inplace=True)
+    if target_col not in data.columns:
+        st.error(f"'{target_col}' column not found in the data for {ticker}. Please check the data source.")
+    else:
+        # Preprocess data
+        df = data[[target_col]].copy()
+        df.reset_index(inplace=True)  # Keep the Date as a column
+        df.set_index('Date', inplace=True)
 
-    # Create features for KNN and Linear Regression
-    df['Year'] = df.index.year
-    df['Month'] = df.index.month
-    df['Day'] = df.index.day
-    df['DayOfWeek'] = df.index.dayofweek
-    df['DayOfYear'] = df.index.dayofyear
+        # Split data into train and valid
+        train_size = int(len(df) * 0.8)  # Use 80% of the data for training
+        train, valid = df.iloc[:train_size], df.iloc[train_size:]
 
-    # Split data into train and valid
-    train_size = int(len(df) * 0.8)  # Use 80% of the data for training
-    train, valid = df.iloc[:train_size], df.iloc[train_size:]
-
-    # For LSTM
-    if model_type == 'LSTM':
+        # LSTM model
         scaler = MinMaxScaler(feature_range=(0, 1))
-        scaled_data = scaler.fit_transform(df[[target_col]])
-        
+        scaled_data = scaler.fit_transform(df)
         x_train, y_train = [], []
         for i in range(60, len(train)):
             x_train.append(scaled_data[i-60:i, 0])
@@ -101,40 +89,21 @@ else:
         valid['Predictions'] = closing_price
         title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using LSTM'
 
-    # For KNN
-    elif model_type == 'KNN':
-        features = df.drop(target_col, axis=1)
-        train = features[:train_size]
-        valid = features[train_size:]
-        x_train = train
-        y_train = df[target_col][:train_size]
-        x_valid = valid
+        # Plot results
+        plot_results(pd.DataFrame(train), valid, title)
+        
+        # Buy/Sell suggestion
+        last_actual = valid[target_col].iloc[-1]
+        last_predicted = valid['Predictions'].iloc[-1]
 
-        params = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9]}
-        knn = neighbors.KNeighborsRegressor()
-        model = GridSearchCV(knn, params, cv=5)
-        model.fit(x_train, y_train)
-        preds = model.predict(x_valid)
+        if last_predicted > last_actual:
+            suggestion = "Buy"
+        elif last_predicted < last_actual:
+            suggestion = "Sell"
+        else:
+            suggestion = "Hold"
 
-        valid['Predictions'] = preds
-        title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using KNN'
-
-    # For Linear Regression
-    else:
-        features = df.drop(target_col, axis=1)
-        train = features[:train_size]
-        valid = features[train_size:]
-        x_train = train
-        y_train = df[target_col][:train_size]
-        x_valid = valid
-
-        model = LinearRegression()
-        model.fit(x_train, y_train)
-        preds = model.predict(x_valid)
-
-        valid['Predictions'] = preds
-        title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using Linear Regression'
-
-    # Plot results
-    plot_results(pd.DataFrame(train), valid, title)
-    st.write(f'RMSE: {np.sqrt(mean_squared_error(valid[target_col], valid["Predictions"]))}')
+        st.write(f'Last Actual Price: {last_actual:.2f}')
+        st.write(f'Last Predicted Price: {last_predicted:.2f}')
+        st.write(f'Suggestion: {suggestion}')
+        st.write(f'RMSE: {np.sqrt(mean_squared_error(valid[target_col], valid["Predictions"]))}')
