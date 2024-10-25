@@ -39,7 +39,7 @@ if st.sidebar.button('Predict'):
     # Get stock data
     data = get_stock_data(ticker)
 
-    # Debugging: Display the first few rows of the data
+    # Display the first few rows of the data
     st.write("First few rows of the downloaded data:")
     st.write(data.head())
 
@@ -61,6 +61,7 @@ if st.sidebar.button('Predict'):
         # LSTM model
         scaler = MinMaxScaler(feature_range=(0, 1))
         scaled_data = scaler.fit_transform(df)
+
         x_train, y_train = [], []
         for i in range(60, len(train)):
             x_train.append(scaled_data[i-60:i, 0])
@@ -83,6 +84,7 @@ if st.sidebar.button('Predict'):
             X_test.append(inputs[i-60:i, 0])
         X_test = np.array(X_test)
         X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
         closing_price = model.predict(X_test)
         closing_price = scaler.inverse_transform(closing_price)
 
@@ -91,11 +93,18 @@ if st.sidebar.button('Predict'):
 
         # Plot results
         plot_results(pd.DataFrame(train), valid, title)
-        
-        # Buy/Sell suggestion
+
+        # Access last actual and predicted prices
         last_actual = valid[target_col].iloc[-1]
         last_predicted = valid['Predictions'].iloc[-1]
 
+        # Ensure they are scalar values
+        if isinstance(last_actual, pd.Series):
+            last_actual = last_actual.values[0]
+        if isinstance(last_predicted, pd.Series):
+            last_predicted = last_predicted.values[0]
+
+        # Suggestion logic
         if last_predicted > last_actual:
             suggestion = "Buy"
         elif last_predicted < last_actual:
