@@ -45,8 +45,13 @@ data = get_stock_data(ticker)
 st.write("First few rows of the downloaded data:")
 st.write(data.head())
 
+# Collect column names dynamically
+columns = data.columns
+st.write("Columns in the data:")
+st.write(columns)
+
 # Check if 'Adj Close' column exists
-if 'Adj Close' not in data.columns:
+if 'Adj Close' not in columns:
     st.error(f"'Adj Close' column not found in the data for {ticker}. Please check the data source.")
 else:
     # Preprocess data
