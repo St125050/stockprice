@@ -1,8 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
-
-name: Build and deploy Python app to Azure Web App - st125050stockpriceprediction
+name: CI/CD Pipeline for Streamlit App
 
 on:
   push:
@@ -15,53 +11,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
+          python-version: '3.9'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      - name: Build Docker image
+        run: |
+          docker build -t st125050/mlfinalproject:latest .
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          name: python-app
-          path: |
-            release.zip
-            !venv/
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image to Docker Hub
+        run: docker push st125050/mlfinalproject:latest
 
   deploy:
-    runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v3
-        with:
-          name: python-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v2
-        id: deploy-to-webapp
+      - name: Deploy application to Azure Web App
+        uses: azure/webapps-container-deploy@v2
         with:
           app-name: 'st125050stockpriceprediction'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_26C76616D9F0456F8AEAAE3D37F57D1E }}
+          image: 'st125050/mlfinalproject:latest'
+          registry-url: 'https://index.docker.io/v1/'
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
