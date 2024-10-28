@@ -5,10 +5,9 @@ from keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 import streamlit as st
 import matplotlib.pyplot as plt
-import joblib
 
-# Load the model
-model = joblib.load('stock_prediction_model.pkl')
+# Load the Keras model
+model = load_model('stock_prediction_model.keras')  # Ensure this is the correct path to your model
 
 # List of stock tickers
 tickers = [
