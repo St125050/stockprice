@@ -105,7 +105,7 @@ if st.button('Predict'):
                 last_input = last_input.reshape((1, 100, 1))
                 next_prediction = model.predict(last_input)
                 future_predictions.append(next_prediction[0, 0])
-                last_input = np.append(last_input[:, 1:, :], [[next_prediction]], axis=1)
+                last_input = np.append(last_input[:, 1:, :], next_prediction.reshape(1, 1, 1), axis=1)
 
             future_predictions = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1))
 
