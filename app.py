@@ -23,9 +23,6 @@ st.title('Stock Market Predictor')
 # Dropdown for selecting stock ticker
 selected_ticker = st.selectbox('Select Stock Symbol', tickers)
 
-# Timeframe options
-timeframe = st.selectbox('Select Prediction Time Frame', ['1 Day', '1 Week', '1 Month', '1 Year'])
-
 # Define the time period for historical data
 start = dt.datetime.today() - dt.timedelta(5 * 365)
 end = dt.datetime.today()
@@ -84,8 +81,7 @@ if st.button('Predict'):
 
             # Prepare test data
             test_data = scaled_data[train_data_len - 100:]
-            x_test, y_test = [], data['Close'][train_data_len:].values
-
+            x_test = []
             for i in range(100, len(test_data)):
                 x_test.append(test_data[i-100:i])
 
@@ -96,45 +92,33 @@ if st.button('Predict'):
             predictions = model.predict(x_test)
             predictions = scaler.inverse_transform(predictions)
 
-            # Calculate latest price and predicted price
-            latest_price = data['Close'].iloc[-1]
+            # Plotting actual vs predicted prices
+            plt.figure(figsize=(10, 6))
+            plt.plot(data['Close'], label='Actual Price', color='g')
+            plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
+            plt.title(f'{selected_ticker} Price Prediction')
+            plt.xlabel('Date')
+            plt.ylabel('Price')
+            plt.legend()
+            st.pyplot(plt)
+
+            # Plotting Moving Averages
+            st.subheader('Moving Averages')
+            ma_50 = data['Close'].rolling(50).mean()
+            ma_100 = data['Close'].rolling(100).mean()
+            ma_200 = data['Close'].rolling(200).mean()
+
+            plt.figure(figsize=(10, 6))
+            plt.plot(data['Close'], label='Close Price', color='g')
+            plt.plot(ma_50, label='MA 50', color='r')
+            plt.plot(ma_100, label='MA 100', color='b')
+            plt.plot(ma_200, label='MA 200', color='purple')
+            plt.title(f'{selected_ticker} Moving Averages')
+            plt.xlabel('Date')
+            plt.ylabel('Price')
+            plt.legend()
+            st.pyplot(plt)
+
+            # Show predicted price
             predicted_price = predictions[-1][0]
-
-            # Ensure latest price and predicted price are valid
-            if latest_price is None or predicted_price is None:
-                st.error("Prediction or latest price is None. Please try again.")
-            else:
-                # Calculate action based on comparison
-                action = "Buy" if predicted_price > latest_price else "Sell"
-
-                # Plotting actual vs predicted prices
-                plt.figure(figsize=(10, 6))
-                plt.plot(data['Close'], label='Actual Price', color='g')
-                plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
-                plt.title(f'{selected_ticker} Price Prediction')
-                plt.xlabel('Date')
-                plt.ylabel('Price')
-                plt.legend()
-                st.pyplot(plt)
-
-                # Plotting Moving Averages
-                st.subheader('Moving Averages')
-                ma_50 = data['Close'].rolling(50).mean()
-                ma_100 = data['Close'].rolling(100).mean()
-                ma_200 = data['Close'].rolling(200).mean()
-
-                plt.figure(figsize=(10, 6))
-                plt.plot(data['Close'], label='Close Price', color='g')
-                plt.plot(ma_50, label='MA 50', color='r')
-                plt.plot(ma_100, label='MA 100', color='b')
-                plt.plot(ma_200, label='MA 200', color='purple')
-                plt.title(f'{selected_ticker} Moving Averages')
-                plt.xlabel('Date')
-                plt.ylabel('Price')
-                plt.legend()
-                st.pyplot(plt)
-
-                # Show predictions and recommendation
-                st.subheader(f'Predicted Price for {selected_ticker}: ${predicted_price:.2f}')
-                st.write(f"Latest Price: ${latest_price:.2f}")
-                st.write(f"Recommendation: {action}")
+            st.subheader(f'Predicted Price for {selected_ticker}: ${predicted_price:.2f}')
