@@ -55,7 +55,7 @@ if st.sidebar.button('Predict'):
 
     # Display the first few rows of the data
     st.write("Last few days stock price data:")
-    st.write(data.Tail())
+    st.write(data.tail())
 
     # Use 'Close' column
     target_col = 'Close'
