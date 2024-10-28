@@ -27,12 +27,26 @@ def plot_results(train, valid, title):
     plt.legend()
     st.pyplot(plt)
 
+# Function to create LSTM model
+def create_lstm_model(input_shape, output_shape):
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=input_shape))
+    model.add(LSTM(units=50))
+    model.add(Dense(output_shape))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    return model
+
 # Streamlit app
 st.title('Stock Price Prediction')
 
 # Sidebar for user input
 st.sidebar.header('User Input')
-ticker = st.sidebar.selectbox('Select Stock Ticker', ('TCS.NS', 'TATAMOTORS.NS', 'TRIDENT.NS'))
+stocks = ['TCS.NS', 'TATAMOTORS.NS', 'TRIDENT.NS', 'AAPL', 'MSFT', 'GOOGL', 
+          'AMZN', 'TSLA', 'NFLX', 'NVDA', 'BRK-B', 'JPM', 'V', 'JNJ', 'PG', 
+          'UNH', 'HD', 'DIS', 'VZ', 'MA', 'CMCSA', 'ADBE', 'PEP', 'T', 
+          'INTC', 'CSCO', 'NKE', 'MRK', 'XOM', 'PFE', 'ABT', 'IBM', 'CRM']
+ticker = st.sidebar.selectbox('Select Stock Ticker', stocks)
+prediction_window = st.sidebar.selectbox('Select Prediction Window', ['1 Day', '1 Week', '1 Month'])
 
 # Button to make predictions
 if st.sidebar.button('Predict'):
@@ -63,33 +77,53 @@ if st.sidebar.button('Predict'):
         scaled_data = scaler.fit_transform(df)
 
         x_train, y_train = [], []
-        for i in range(60, len(train)):
-            x_train.append(scaled_data[i-60:i, 0])
-            y_train.append(scaled_data[i, 0])
+        window_size = 60  # Lookback period
+
+        for i in range(window_size, len(train)):
+            x_train.append(scaled_data[i-window_size:i, 0])
+            if prediction_window == '1 Day':
+                y_train.append(scaled_data[i, 0])
+            elif prediction_window == '1 Week':
+                y_train.append(scaled_data[i:i + 5, 0])  # Next 5 days
+            elif prediction_window == '1 Month':
+                y_train.append(scaled_data[i:i + 21, 0])  # Next 21 days (approx. 1 month)
+
         x_train, y_train = np.array(x_train), np.array(y_train)
+
+        # Reshape for LSTM
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-        model = Sequential()
-        model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
-        model.add(LSTM(units=50))
-        model.add(Dense(1))
-        model.compile(loss='mean_squared_error', optimizer='adam')
-        model.fit(x_train, y_train, epochs=1, batch_size=1, verbose=2)
+        # Train the model
+        model = create_lstm_model((x_train.shape[1], 1), 1 if prediction_window == '1 Day' else 5 if prediction_window == '1 Week' else 21)
+        model.fit(x_train, y_train, epochs=10, batch_size=1, verbose=2)
 
-        inputs = df[len(df) - len(valid) - 60:].values
+        # Prepare test data
+        inputs = scaled_data[len(scaled_data) - len(valid) - window_size:]
         inputs = inputs.reshape(-1, 1)
         inputs = scaler.transform(inputs)
-        X_test = []
-        for i in range(60, inputs.shape[0]):
-            X_test.append(inputs[i-60:i, 0])
-        X_test = np.array(X_test)
-        X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-        closing_price = model.predict(X_test)
+        x_test = []
+        for i in range(window_size, inputs.shape[0]):
+            x_test.append(inputs[i-window_size:i, 0])
+        x_test = np.array(x_test)
+        x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+
+        # Predictions
+        closing_price = model.predict(x_test)
         closing_price = scaler.inverse_transform(closing_price)
 
-        valid['Predictions'] = closing_price
-        title = f'Predicted {target_col} vs Actual {target_col} on {ticker} using LSTM'
+        # Add predictions to the valid set
+        valid = df[len(train):].copy()
+        if prediction_window == '1 Day':
+            valid['Predictions'] = closing_price
+        elif prediction_window == '1 Week':
+            for i in range(len(closing_price)):
+                valid.loc[valid.index[i]:valid.index[i + 4], 'Predictions'] = closing_price[i]
+        elif prediction_window == '1 Month':
+            for i in range(len(closing_price)):
+                valid.loc[valid.index[i]:valid.index[i + 20], 'Predictions'] = closing_price[i]
+
+        title = f'Predicted {target_col} vs Actual {target_col} on {ticker} ({prediction_window})'
 
         # Plot results
         plot_results(pd.DataFrame(train), valid, title)
