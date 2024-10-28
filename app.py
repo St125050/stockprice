@@ -23,6 +23,9 @@ st.title('Stock Market Predictor')
 # Dropdown for selecting stock ticker
 selected_ticker = st.selectbox('Select Stock Symbol', tickers)
 
+# Timeframe selection
+timeframe = st.selectbox('Select Prediction Time Frame', ['1 Day', '1 Week', '1 Month', '1 Year'])
+
 # Define the time period for historical data
 start = dt.datetime.today() - dt.timedelta(5 * 365)
 end = dt.datetime.today()
@@ -92,11 +95,44 @@ if st.button('Predict'):
             predictions = model.predict(x_test)
             predictions = scaler.inverse_transform(predictions)
 
+            # Calculate the number of steps based on the selected time frame
+            if timeframe == '1 Day':
+                future_steps = 1
+            elif timeframe == '1 Week':
+                future_steps = 5
+            elif timeframe == '1 Month':
+                future_steps = 30
+            elif timeframe == '1 Year':
+                future_steps = 252  # Approximate trading days in a year
+            
+            # Prepare future predictions
+            future_predictions = []
+            last_input = test_data[-100:]
+
+            for _ in range(future_steps):
+                last_input = np.append(last_input[1:], [[predictions[-1]]], axis=0)
+                last_input = last_input.reshape((1, 100, 1))
+                next_prediction = model.predict(last_input)
+                future_predictions.append(next_prediction[0, 0])
+                predictions = np.append(predictions, next_prediction)
+
+            future_predictions = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1))
+
             # Plotting actual vs predicted prices
             plt.figure(figsize=(10, 6))
             plt.plot(data['Close'], label='Actual Price', color='g')
             plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
             plt.title(f'{selected_ticker} Price Prediction')
+            plt.xlabel('Date')
+            plt.ylabel('Price')
+            plt.legend()
+            st.pyplot(plt)
+
+            # Plot future predictions
+            future_dates = pd.date_range(start=data.index[-1] + dt.timedelta(days=1), periods=future_steps, freq='B')
+            plt.figure(figsize=(10, 6))
+            plt.plot(future_dates, future_predictions, label='Future Predictions', color='orange')
+            plt.title(f'{selected_ticker} Future Price Predictions ({timeframe})')
             plt.xlabel('Date')
             plt.ylabel('Price')
             plt.legend()
