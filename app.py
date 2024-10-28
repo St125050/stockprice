@@ -43,7 +43,7 @@ if st.button('Predict'):
         st.error("No data available for the selected stock.")
     else:
         # Prepare data for LSTM
-        data = data[['Close']].dropna()  # Keep only the 'Close' column and drop NaNs
+        data = data[['Close']].dropna()
         if data.empty:
             st.error("Data is empty after dropping NaNs.")
         else:
@@ -78,8 +78,6 @@ if st.button('Predict'):
             model.add(Dense(1))
 
             model.compile(optimizer='adam', loss='mean_squared_error')
-
-            # Fit model
             model.fit(x_train, y_train, batch_size=32, epochs=5)
 
             # Prepare test data
@@ -96,25 +94,18 @@ if st.button('Predict'):
             predictions = scaler.inverse_transform(predictions)
 
             # Calculate the number of steps based on the selected time frame
-            if timeframe == '1 Day':
-                future_steps = 1
-            elif timeframe == '1 Week':
-                future_steps = 5
-            elif timeframe == '1 Month':
-                future_steps = 30
-            elif timeframe == '1 Year':
-                future_steps = 252  # Approximate trading days in a year
-            
+            future_steps_map = {'1 Day': 1, '1 Week': 5, '1 Month': 30, '1 Year': 252}
+            future_steps = future_steps_map[timeframe]
+
             # Prepare future predictions
             future_predictions = []
             last_input = test_data[-100:]
 
             for _ in range(future_steps):
-                last_input = np.append(last_input[1:], [[predictions[-1]]], axis=0)
                 last_input = last_input.reshape((1, 100, 1))
                 next_prediction = model.predict(last_input)
                 future_predictions.append(next_prediction[0, 0])
-                predictions = np.append(predictions, next_prediction)
+                last_input = np.append(last_input[:, 1:, :], [[next_prediction]], axis=1)
 
             future_predictions = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1))
 
