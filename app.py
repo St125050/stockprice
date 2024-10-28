@@ -18,10 +18,13 @@ tickers = [
 ]
 
 # Streamlit App
-st.header('Stock Market Predictor')
+st.title('Stock Market Predictor')
 
 # Dropdown for selecting stock ticker
 selected_ticker = st.selectbox('Select Stock Symbol', tickers)
+
+# Timeframe options
+timeframe = st.selectbox('Select Prediction Time Frame', ['1 Day', '1 Week', '1 Month', '1 Year'])
 
 # Define the time period for historical data
 start = dt.datetime.today() - dt.timedelta(5 * 365)
@@ -67,7 +70,7 @@ model.add(Dense(1))
 
 model.compile(optimizer='adam', loss='mean_squared_error')
 
-# Reduce epochs to 5
+# Fit model
 model.fit(x_train, y_train, batch_size=32, epochs=5)
 
 # Prepare test data
