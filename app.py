@@ -66,7 +66,9 @@ model.add(Dropout(0.5))
 model.add(Dense(1))
 
 model.compile(optimizer='adam', loss='mean_squared_error')
-model.fit(x_train, y_train, batch_size=32, epochs=50)
+
+# Reduce epochs to 5
+model.fit(x_train, y_train, batch_size=32, epochs=5)
 
 # Prepare test data
 test_data = scaled_data[train_data_len - 100:]
