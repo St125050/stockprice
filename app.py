@@ -96,39 +96,45 @@ if st.button('Predict'):
             predictions = model.predict(x_test)
             predictions = scaler.inverse_transform(predictions)
 
-            # Calculate buy/sell signals
+            # Calculate latest price and predicted price
             latest_price = data['Close'].iloc[-1]
             predicted_price = predictions[-1][0]
-            action = "Buy" if predicted_price > latest_price else "Sell"
 
-            # Plotting actual vs predicted prices
-            plt.figure(figsize=(10, 6))
-            plt.plot(data['Close'], label='Actual Price', color='g')
-            plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
-            plt.title(f'{selected_ticker} Price Prediction')
-            plt.xlabel('Date')
-            plt.ylabel('Price')
-            plt.legend()
-            st.pyplot(plt)
+            # Ensure the predicted price is not NaN
+            if pd.isna(latest_price) or pd.isna(predicted_price):
+                st.error("Prediction or latest price is NaN. Please try again.")
+            else:
+                # Calculate action based on comparison
+                action = "Buy" if predicted_price > latest_price else "Sell"
 
-            # Plotting Moving Averages
-            st.subheader('Moving Averages')
-            ma_50 = data['Close'].rolling(50).mean()
-            ma_100 = data['Close'].rolling(100).mean()
-            ma_200 = data['Close'].rolling(200).mean()
+                # Plotting actual vs predicted prices
+                plt.figure(figsize=(10, 6))
+                plt.plot(data['Close'], label='Actual Price', color='g')
+                plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
+                plt.title(f'{selected_ticker} Price Prediction')
+                plt.xlabel('Date')
+                plt.ylabel('Price')
+                plt.legend()
+                st.pyplot(plt)
 
-            plt.figure(figsize=(10, 6))
-            plt.plot(data['Close'], label='Close Price', color='g')
-            plt.plot(ma_50, label='MA 50', color='r')
-            plt.plot(ma_100, label='MA 100', color='b')
-            plt.plot(ma_200, label='MA 200', color='purple')
-            plt.title(f'{selected_ticker} Moving Averages')
-            plt.xlabel('Date')
-            plt.ylabel('Price')
-            plt.legend()
-            st.pyplot(plt)
+                # Plotting Moving Averages
+                st.subheader('Moving Averages')
+                ma_50 = data['Close'].rolling(50).mean()
+                ma_100 = data['Close'].rolling(100).mean()
+                ma_200 = data['Close'].rolling(200).mean()
 
-            # Show predictions and recommendation
-            st.subheader(f'Predicted Price for {selected_ticker}: ${predicted_price:.2f}')
-            st.write(f"Latest Price: ${latest_price:.2f}")
-            st.write(f"Recommendation: {action}")
+                plt.figure(figsize=(10, 6))
+                plt.plot(data['Close'], label='Close Price', color='g')
+                plt.plot(ma_50, label='MA 50', color='r')
+                plt.plot(ma_100, label='MA 100', color='b')
+                plt.plot(ma_200, label='MA 200', color='purple')
+                plt.title(f'{selected_ticker} Moving Averages')
+                plt.xlabel('Date')
+                plt.ylabel('Price')
+                plt.legend()
+                st.pyplot(plt)
+
+                # Show predictions and recommendation
+                st.subheader(f'Predicted Price for {selected_ticker}: ${predicted_price:.2f}')
+                st.write(f"Latest Price: ${latest_price:.2f}")
+                st.write(f"Recommendation: {action}")
