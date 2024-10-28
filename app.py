@@ -100,9 +100,9 @@ if st.button('Predict'):
             latest_price = data['Close'].iloc[-1]
             predicted_price = predictions[-1][0]
 
-            # Ensure the predicted price is not NaN
-            if pd.isna(latest_price) or pd.isna(predicted_price):
-                st.error("Prediction or latest price is NaN. Please try again.")
+            # Ensure latest price and predicted price are valid
+            if latest_price is None or predicted_price is None:
+                st.error("Prediction or latest price is None. Please try again.")
             else:
                 # Calculate action based on comparison
                 action = "Buy" if predicted_price > latest_price else "Sell"
