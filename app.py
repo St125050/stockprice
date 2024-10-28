@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
 import yfinance as yf
-from keras.models import load_model
-from sklearn.preprocessing import MinMaxScaler
-import streamlit as st
+import datetime as dt
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from keras.models import load_model
+import streamlit as st
 
-# Load the Keras model
-model = load_model('stock_prediction_model.keras')  # Ensure this is the correct path to your model
+# Load the pre-trained LSTM model (make sure you have it saved in your directory)
+model = load_model('your_model_path.keras')  # Update this path
 
 # List of stock tickers
 tickers = [
@@ -22,74 +23,63 @@ tickers = [
 st.header('Stock Market Predictor')
 
 # Dropdown for selecting stock ticker
-stock = st.selectbox('Select Stock Symbol', tickers)
-start = '2012-01-01'
-end = '2022-12-31'
+selected_ticker = st.selectbox('Select Stock Symbol', tickers)
+
+# Timeframe options
+timeframe = st.selectbox('Select Prediction Time Frame', ['1 Day', '1 Week', '1 Month', '1 Year'])
+
+# Define the time period for historical data
+start = dt.datetime.today() - dt.timedelta(5 * 365)
+end = dt.datetime.today()
 
 # Download stock data
-data = yf.download(stock, start=start, end=end)
+data = yf.download(selected_ticker, start=start, end=end)
 
 st.subheader('Stock Data')
 st.write(data)
 
 # Prepare data for prediction
-data_train = pd.DataFrame(data['Close'][0:int(len(data) * 0.80)])
-data_test = pd.DataFrame(data['Close'][int(len(data) * 0.80):len(data)])
+data = data[['Close']]
+data = data.dropna()
 
+# Normalize data
 scaler = MinMaxScaler(feature_range=(0, 1))
-pas_100_days = data_train.tail(100)
-data_test = pd.concat([pas_100_days, data_test], ignore_index=True)
-data_test_scale = scaler.fit_transform(data_test)
+scaled_data = scaler.fit_transform(data)
 
-x_test, y_test = [], []
-for i in range(100, data_test_scale.shape[0]):
-    x_test.append(data_test_scale[i - 100:i])
-    y_test.append(data_test_scale[i, 0])
+# Prepare inputs for the model
+x_input = scaled_data[-100:].reshape(1, -1, 1)
 
-x_test = np.array(x_test)
+# Function to make predictions
+def make_predictions(model, x_input, timeframe):
+    if timeframe == '1 Day':
+        predictions = model.predict(x_input)
+        predictions = scaler.inverse_transform(predictions)
+        return predictions[0][0]
+    else:
+        future_steps = {'1 Week': 5, '1 Month': 30, '1 Year': 252}
+        predictions = []
+        
+        for _ in range(future_steps[timeframe]):
+            predicted_price = model.predict(x_input)
+            predictions.append(predicted_price[0][0])
+            x_input = np.append(x_input[:, 1:, :], predicted_price.reshape(1, 1, 1), axis=1)
+        
+        predictions = scaler.inverse_transform(predictions)
+        return predictions.flatten()
 
-# Predict
-y_predict = model.predict(x_test)
-scale = 1 / scaler.scale_[0]
-y_predict = y_predict * scale
-y_test = np.array(y_test) * scale
+# Make predictions based on selected timeframe
+if st.button('Predict'):
+    predicted_price = make_predictions(model, x_input, timeframe)
+    
+    st.subheader(f'Predicted Price for {selected_ticker} ({timeframe}):')
+    st.write(f"${predicted_price:.2f}")
 
-# Plotting results
-st.subheader('Original Price vs Predicted Price')
-fig4 = plt.figure(figsize=(8, 6))
-plt.plot(y_predict, 'r', label='Predicted Price')
-plt.plot(y_test, 'g', label='Original Price')
-plt.xlabel('Time')
-plt.ylabel('Price')
-plt.legend()
-st.pyplot(fig4)
-
-# Moving averages
-st.subheader('Price vs MA50')
-ma_50_days = data['Close'].rolling(50).mean()
-fig1 = plt.figure(figsize=(8, 6))
-plt.plot(ma_50_days, 'r', label='MA 50')
-plt.plot(data['Close'], 'g', label='Close Price')
-plt.title('Price vs MA50')
-plt.legend()
-st.pyplot(fig1)
-
-st.subheader('Price vs MA50 vs MA100')
-ma_100_days = data['Close'].rolling(100).mean()
-fig2 = plt.figure(figsize=(8, 6))
-plt.plot(ma_50_days, 'r', label='MA 50')
-plt.plot(ma_100_days, 'b', label='MA 100')
-plt.plot(data['Close'], 'g', label='Close Price')
-plt.title('Price vs MA50 vs MA100')
-plt.legend()
-st.pyplot(fig2)
-
-st.subheader('Price vs MA100 vs MA200')
-ma_200_days = data['Close'].rolling(200).mean()
-fig3 = plt.figure(figsize=(8, 6))
-plt.plot(ma_100_days, 'r', label='MA 100')
-plt.plot(ma_200_days, 'b', label='MA 200')
-plt.plot(data['Close'], 'g', label='Close Price')
-plt.title('Price vs MA100 vs MA200')
-plt.legend()
-st.pyplot(fig3)
+    # Plotting actual vs predicted prices (optional)
+    plt.figure(figsize=(10, 6))
+    plt.plot(data.index[-100:], data['Close'][-100:], label='Actual Price')
+    plt.axhline(y=predicted_price, color='r', linestyle='--', label='Predicted Price')
+    plt.title(f'{selected_ticker} Price Prediction')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    st.pyplot(plt)
