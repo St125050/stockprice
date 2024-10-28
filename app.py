@@ -4,11 +4,9 @@ import yfinance as yf
 import datetime as dt
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from keras.models import load_model
+from keras.models import Sequential
+from keras.layers import Dense, LSTM, Dropout
 import streamlit as st
-
-# Load the pre-trained LSTM model (make sure you have it saved in your directory)
-model = load_model('your_model_path.keras')  # Update this path
 
 # List of stock tickers
 tickers = [
@@ -25,9 +23,6 @@ st.header('Stock Market Predictor')
 # Dropdown for selecting stock ticker
 selected_ticker = st.selectbox('Select Stock Symbol', tickers)
 
-# Timeframe options
-timeframe = st.selectbox('Select Prediction Time Frame', ['1 Day', '1 Week', '1 Month', '1 Year'])
-
 # Define the time period for historical data
 start = dt.datetime.today() - dt.timedelta(5 * 365)
 end = dt.datetime.today()
@@ -38,48 +33,88 @@ data = yf.download(selected_ticker, start=start, end=end)
 st.subheader('Stock Data')
 st.write(data)
 
-# Prepare data for prediction
-data = data[['Close']]
-data = data.dropna()
-
-# Normalize data
+# Prepare data for LSTM
+data = data[['Close']].dropna()
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaled_data = scaler.fit_transform(data)
 
-# Prepare inputs for the model
-x_input = scaled_data[-100:].reshape(1, -1, 1)
+# Create training and testing datasets
+train_data_len = int(np.ceil(0.8 * len(scaled_data)))
+train_data = scaled_data[0:train_data_len]
+x_train, y_train = [], []
 
-# Function to make predictions
-def make_predictions(model, x_input, timeframe):
-    if timeframe == '1 Day':
-        predictions = model.predict(x_input)
-        predictions = scaler.inverse_transform(predictions)
-        return predictions[0][0]
-    else:
-        future_steps = {'1 Week': 5, '1 Month': 30, '1 Year': 252}
-        predictions = []
-        
-        for _ in range(future_steps[timeframe]):
-            predicted_price = model.predict(x_input)
-            predictions.append(predicted_price[0][0])
-            x_input = np.append(x_input[:, 1:, :], predicted_price.reshape(1, 1, 1), axis=1)
-        
-        predictions = scaler.inverse_transform(predictions)
-        return predictions.flatten()
+# Prepare training data
+for i in range(100, len(train_data)):
+    x_train.append(train_data[i-100:i])
+    y_train.append(train_data[i, 0])
 
-# Make predictions based on selected timeframe
-if st.button('Predict'):
-    predicted_price = make_predictions(model, x_input, timeframe)
-    
-    st.subheader(f'Predicted Price for {selected_ticker} ({timeframe}):')
-    st.write(f"${predicted_price:.2f}")
+x_train, y_train = np.array(x_train), np.array(y_train)
 
-    # Plotting actual vs predicted prices (optional)
-    plt.figure(figsize=(10, 6))
-    plt.plot(data.index[-100:], data['Close'][-100:], label='Actual Price')
-    plt.axhline(y=predicted_price, color='r', linestyle='--', label='Predicted Price')
-    plt.title(f'{selected_ticker} Price Prediction')
-    plt.xlabel('Date')
-    plt.ylabel('Price')
-    plt.legend()
-    st.pyplot(plt)
+# Reshape data for LSTM
+x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+# Build LSTM model
+model = Sequential()
+model.add(LSTM(50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
+model.add(Dropout(0.2))
+model.add(LSTM(60, return_sequences=True))
+model.add(Dropout(0.3))
+model.add(LSTM(80, return_sequences=True))
+model.add(Dropout(0.4))
+model.add(LSTM(120))
+model.add(Dropout(0.5))
+model.add(Dense(1))
+
+model.compile(optimizer='adam', loss='mean_squared_error')
+model.fit(x_train, y_train, batch_size=32, epochs=50)
+
+# Prepare test data
+test_data = scaled_data[train_data_len - 100:]
+x_test, y_test = [], data['Close'][train_data_len:].values
+
+for i in range(100, len(test_data)):
+    x_test.append(test_data[i-100:i])
+
+x_test = np.array(x_test)
+x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+
+# Make predictions
+predictions = model.predict(x_test)
+predictions = scaler.inverse_transform(predictions)
+
+# Calculate buy/sell signals
+latest_price = data['Close'].iloc[-1]
+predicted_price = predictions[-1][0]
+action = "Buy" if predicted_price > latest_price else "Sell"
+
+# Plotting actual vs predicted prices
+plt.figure(figsize=(10, 6))
+plt.plot(data['Close'], label='Actual Price', color='g')
+plt.plot(data.index[train_data_len:], predictions, label='Predicted Price', color='r')
+plt.title(f'{selected_ticker} Price Prediction')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.legend()
+st.pyplot(plt)
+
+# Plotting Moving Averages
+st.subheader('Moving Averages')
+ma_50 = data['Close'].rolling(50).mean()
+ma_100 = data['Close'].rolling(100).mean()
+ma_200 = data['Close'].rolling(200).mean()
+
+plt.figure(figsize=(10, 6))
+plt.plot(data['Close'], label='Close Price', color='g')
+plt.plot(ma_50, label='MA 50', color='r')
+plt.plot(ma_100, label='MA 100', color='b')
+plt.plot(ma_200, label='MA 200', color='purple')
+plt.title(f'{selected_ticker} Moving Averages')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.legend()
+st.pyplot(plt)
+
+# Show predictions and recommendation
+st.subheader(f'Predicted Price for {selected_ticker}: ${predicted_price:.2f}')
+st.write(f"Latest Price: ${latest_price:.2f}")
+st.write(f"Recommendation: {action}")
