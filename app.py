@@ -53,7 +53,7 @@ if st.sidebar.button('Predict'):
     # Get stock data
     data = get_stock_data(ticker)
 
-    # Display the first few rows of the data
+    # Display the last few rows of the data
     st.write("Last few days stock price data:")
     st.write(data.tail())
 
@@ -93,9 +93,9 @@ if st.sidebar.button('Predict'):
         # Reshape for LSTM
         x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-        # Train the model
+        # Train the model with reduced epochs
         model = create_lstm_model((x_train.shape[1], 1), 1 if prediction_window == '1 Day' else 5 if prediction_window == '1 Week' else 21)
-        model.fit(x_train, y_train, epochs=10, batch_size=1, verbose=2)
+        model.fit(x_train, y_train, epochs=5, batch_size=1, verbose=2)
 
         # Prepare test data
         inputs = scaled_data[len(scaled_data) - len(valid) - window_size:]
@@ -118,10 +118,12 @@ if st.sidebar.button('Predict'):
             valid['Predictions'] = closing_price
         elif prediction_window == '1 Week':
             for i in range(len(closing_price)):
-                valid.loc[valid.index[i]:valid.index[i + 4], 'Predictions'] = closing_price[i]
+                if i + 5 <= len(valid):
+                    valid.loc[valid.index[i]:valid.index[i + 4], 'Predictions'] = closing_price[i]
         elif prediction_window == '1 Month':
             for i in range(len(closing_price)):
-                valid.loc[valid.index[i]:valid.index[i + 20], 'Predictions'] = closing_price[i]
+                if i + 21 <= len(valid):
+                    valid.loc[valid.index[i]:valid.index[i + 20], 'Predictions'] = closing_price[i]
 
         title = f'Predicted {target_col} vs Actual {target_col} on {ticker} ({prediction_window})'
 
