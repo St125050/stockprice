@@ -1,0 +1,25 @@
+# Ignore Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore local configuration files
+*.env
+*.local
+
+# Ignore cache and temporary files
+*.pkl
+*.log
+*.tmp
+*.cache
+
+# Ignore version control directories
+.git
+.gitignore
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore any virtual environment directories
+venv/
+env/
