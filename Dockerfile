@@ -1,18 +1,20 @@
-# Use the official Python image as a base
-FROM python:3.8-slim
+# Use the official Python image from the Docker Hub
+FROM python:3.9
 
 # Set the working directory
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
-COPY requirements.txt ./
+# Copy the requirements file
+COPY requirements.txt .
+
+# Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
+# Copy the rest of the app code
 COPY app.py .
 
-# Expose the port that Streamlit runs on
+# Expose the port Streamlit runs on
 EXPOSE 8501
 
-# Command to run the Streamlit app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.headless=true"]
+# Command to run the app
+CMD ["streamlit", "run", "your_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
