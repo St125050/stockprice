@@ -1,7 +1,17 @@
 # stockprice
-Sure! Below is a sample **README** file for your stock market prediction app using Streamlit and LSTM model.
+
+## Live Demo
+
+The **Stock Market Predictor** application is deployed and can be accessed online. You can explore the application and try out the stock prediction feature through the following link:
+[Stock Price Predictor - Live Demo](https://stockprice-6enjzsjla9nooqfybejgtv.streamlit.app/)
+
+[Stock Price Predictor - Live Demo](https://stockpricest125050-hfa8h2hae7cqeeay.canadacentral-01.azurewebsites.net)
+
+Feel free to select a stock ticker, choose the prediction timeframe, and get predictions for the stock price!
 
 ---
+
+This will make it clear to users where they can access the live version of the app, and the link will be easy to click for anyone visiting your repository.
 
 # Stock Market Predictor
 
