@@ -112,6 +112,99 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Streamlit**: For building the interactive web application.
 - **Keras** and **TensorFlow**: For deep learning and model training.
 
+
+## CI/CD Pipeline and Deployment to Azure Web Apps
+
+This project utilizes **GitHub Actions** to automatically build, test, and deploy the stock market prediction web app to **Azure Web App**. Below is an overview of the GitHub Actions workflow that automates the entire process from building the Docker container to deploying the app on Azure.
+
+### GitHub Actions Workflow
+
+The workflow file (`.github/workflows/azure-web-app.yml`) defines the following steps:
+
+1. **Build Job**:
+   - **Checkout the code**: The code is checked out from the GitHub repository using `actions/checkout@v2`.
+   - **Setup Docker Buildx**: Docker's Buildx tool is set up for building the container image.
+   - **Login to Docker Registry**: Logs in to Docker Hub using credentials stored in GitHub Secrets. This allows the action to push the container image to the Docker registry.
+   - **Build and Push Docker Image**: The Docker image is built using the `Dockerfile` in the repository and then pushed to Docker Hub with a tag that includes the GitHub commit SHA.
+
+2. **Deploy Job**:
+   - **Deploy to Azure Web App**: After the build job is complete, the action uses `azure/webapps-deploy@v2` to deploy the Docker container to **Azure Web Apps**. It uses a publish profile stored in GitHub Secrets to authenticate and push the container image to the Azure web app.
+   - The web app name is set to `stockpricest125050`, and the deployment happens in the `production` slot.
+
+### Steps in the Deployment Workflow
+
+#### 1. **Build and Push Docker Image**
+```yaml
+- name: Build and push container image to registry
+  uses: docker/build-push-action@v3
+  with:
+    push: true
+    tags: index.docker.io/${{ secrets.AzureAppService_ContainerUsername }}/st125050/mlfinalproject:${{ github.sha }}
+    file: ./Dockerfile
+```
+- The Docker image is built based on the `Dockerfile` in the root directory of the project.
+- The image is pushed to Docker Hub using a unique tag that corresponds to the current commit (`${{ github.sha }}`).
+
+#### 2. **Deploy to Azure Web App**
+```yaml
+- name: Deploy to Azure Web App
+  id: deploy-to-webapp
+  uses: azure/webapps-deploy@v2
+  with:
+    app-name: 'stockpricest125050'
+    slot-name: 'production'
+    publish-profile: ${{ secrets.AzureAppService_PublishProfile }}
+    images: 'index.docker.io/${{ secrets.AzureAppService_ContainerUsername }}/st125050/mlfinalproject:${{ github.sha }}'
+```
+- The Docker image is deployed to the **Azure Web App** named `stockpricest125050` in the `production` slot.
+- The deployment is authenticated using a **Publish Profile** stored as a GitHub Secret (`AzureAppService_PublishProfile`).
+
+### GitHub Secrets
+
+To securely manage credentials for deployment, the following **GitHub Secrets** should be set up in the repository:
+
+- **AzureAppService_ContainerUsername**: Your Docker Hub username.
+- **AzureAppService_ContainerPassword**: Your Docker Hub password.
+- **AzureAppService_PublishProfile**: The publish profile from Azure Web Apps, which contains the credentials needed to deploy the app.
+
+### Triggering the Workflow
+
+The workflow can be triggered in two ways:
+
+1. **Push to the `main` branch**: Every time there is a push to the `main` branch, this workflow is triggered, automatically building and deploying the latest changes.
+   
+   ```yaml
+   on:
+     push:
+       branches:
+         - main
+   ```
+
+2. **Manual Trigger (Workflow Dispatch)**: The workflow can also be manually triggered from the GitHub Actions interface.
+
+   ```yaml
+   on:
+     workflow_dispatch:
+   ```
+
+### Benefits of This Setup
+
+- **Automated Deployment**: Every change to the `main` branch is automatically built and deployed to Azure Web Apps, ensuring that the latest changes are always live.
+- **Containerization**: Using Docker ensures that the app runs in a consistent environment across different stages (development, testing, production).
+- **Scalable and Reliable**: Azure Web Apps provide scalability, so the app can handle increasing traffic without requiring manual intervention.
+
+### Troubleshooting
+
+If there are any issues with the deployment process, you can check the **GitHub Actions** logs for detailed error messages. Common issues could include:
+
+- Incorrect credentials stored in GitHub Secrets.
+- Errors in the Dockerfile causing the build to fail.
+- Incorrect Azure Web App settings or insufficient permissions.
+
+## Conclusion
+
+This GitHub Actions setup automates the process of building and deploying the stock prediction web app to **Azure Web App**, ensuring efficient and reliable updates. The CI/CD pipeline is triggered on every change to the `main` branch, allowing for continuous integration and deployment with minimal manual intervention.
+
 ---
 
-This README provides the necessary instructions to run and interact with the stock market prediction app. It includes setup steps, a detailed explanation of how the application works, and areas for future improvements.
+This section will give users a complete overview of how the CI/CD process works, from building and pushing Docker containers to deploying the app to Azure Web Apps using GitHub Actions.
