@@ -12,6 +12,78 @@ Feel free to select a stock ticker, choose the prediction timeframe, and get pre
 ---
 
 This will make it clear to users where they can access the live version of the app, and the link will be easy to click for anyone visiting your repository.
+## Dataset Explanation
+
+The dataset used in this project contains historical stock data, including daily price and volume information for different stocks. Below is an explanation of each column in the dataset:
+
+### Dataset Columns
+
+1. **Date**:
+   - Represents the **date** on which the stock data was recorded.
+   - The date is displayed in the format `YYYY-MM-DD`.
+   - Example: `1980-12-12` (the data corresponds to December 12, 1980).
+
+2. **Open**:
+   - The **opening price** of the stock on the given date.
+   - This price reflects the value at which the stock started trading on the specific day.
+   - Example: `0.128348` (the stock opened at this price on `1980-12-12`).
+
+3. **High**:
+   - The **highest price** the stock reached during the trading day.
+   - This reflects the peak value of the stock between the market open and close on the given date.
+   - Example: `0.128906` (the highest price reached on `1980-12-12`).
+
+4. **Low**:
+   - The **lowest price** the stock reached during the trading day.
+   - This reflects the lowest value the stock traded at during that day's session.
+   - Example: `0.128348` (the lowest price on `1980-12-12`).
+
+5. **Close**:
+   - The **closing price** of the stock when the market closed on a particular day.
+   - This is considered the most important price as it reflects the final transaction of the day.
+   - Example: `0.128348` (the closing price on `1980-12-12`).
+
+6. **Adj Close** (Adjusted Close):
+   - The **adjusted closing price** after accounting for corporate actions like stock splits, dividends, and new stock issues.
+   - It provides a more accurate reflection of the stock's value, especially when comparing stock performance over time.
+   - Example: `0.100323` (the adjusted close on `1980-12-12`, which could reflect adjustments due to corporate actions like a stock split or dividend payouts).
+
+7. **Volume**:
+   - The **number of shares** that were traded on that day.
+   - This represents the total trading activity for the stock on the given day.
+   - Example: `469033600` (the trading volume on `1980-12-12`).
+
+8. **Stock**:
+   - The **ticker symbol** of the stock being tracked.
+   - In this dataset, all rows have the ticker symbol `AAPL`, which refers to **Apple Inc.**.
+   - Example: `AAPL` (Apple Inc. stock).
+
+---
+
+### Example Row Breakdown
+
+Here is an example of a row from the dataset:
+
+| Date       | Open     | High     | Low      | Close    | Adj Close | Volume     | Stock |
+|------------|----------|----------|----------|----------|-----------|------------|-------|
+| 1980-12-12 | 0.128348 | 0.128906 | 0.128348 | 0.128348 | 0.100323  | 469033600 | AAPL  |
+
+- **Date**: `1980-12-12`
+- **Open**: `0.128348` (The stock opened at this price)
+- **High**: `0.128906` (The highest price reached during the day)
+- **Low**: `0.128348` (The lowest price reached during the day)
+- **Close**: `0.128348` (The price at which the stock closed)
+- **Adj Close**: `0.100323` (The adjusted close price after corporate actions)
+- **Volume**: `469033600` (The number of shares traded during the day)
+- **Stock**: `AAPL` (Apple stock)
+
+---
+
+## How It Works
+
+This dataset allows you to analyze stock performance, track price movements, and calculate various metrics such as moving averages, volatility, and trading volume patterns. The data is used to train a machine learning model, specifically an LSTM (Long Short-Term Memory) model, to predict future stock prices.
+
+---
 
 # Stock Market Predictor
 
